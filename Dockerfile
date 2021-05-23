@@ -1,4 +1,10 @@
 FROM siemersn/nosharstudio
+##FROM noshar:latest
+
+
+RUN /usr/local/bin/pip3 install biopython 
+RUN rm /usr/local/bin/python ; ln -s /usr/local/bin/python3 /usr/local/bin/python
+RUN rm /usr/local/bin/pip; ln -s /usr/local/bin/pip3 /usr/local/bin/pip
 
 ## nosharstudio has rich R and newer python installed first in path
 
@@ -31,16 +37,14 @@ RUN tar -xzvf kallisto_linux-v0.43.1.tar.gz && rm kallisto_linux-v0.43.1.tar.gz
 RUN apt-get -y install graphviz
 
 
-RUN ln -s /usr/local/bin/python3 /usr/local/bin/python
-RUN ln -s /usr/local/bin/pip3 /usr/local/bin/pip
-RUN apt-get install -y rustc
-RUN apt-get install -y libgirepository1.0-dev
 ## update python if necessary
 RUN pip3 install numpy --upgrade
 RUN pip3 install pyparsing --upgrade
 
+
 RUN wget   https://github.com/Teichlab/tracer/archive/refs/heads/master.zip && unzip master.zip && mv tracer-master tracer
 RUN cd tracer && pip install -r docker_helper_files/requirements_stable.txt && python3 setup.py install
+##RUN cd tracer && python3 setup.py install
 
 #obtaining the transcript sequences. no salmon/kallisto indices as they make dockerhub unhappy for some reason
 RUN mkdir GRCh38 && cd GRCh38 && wget   ftp://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_27/gencode.v27.transcripts.fa.gz && \
@@ -52,16 +56,35 @@ RUN mkdir GRCm38 && cd GRCm38 && wget  ftp://ftp.ebi.ac.uk/pub/databases/gencode
 RUN cp tracer/docker_helper_files/docker_tracer.conf ~/.tracerrc
 
 #this is a tracer container, so let's point it at a tracer wrapper that sets the silly IgBLAST environment variable thing
-ENTRYPOINT ["bash", "tracer/docker_helper_files/docker_wrapper.sh"]
+## there's a change in IUPAC call that needs fixing due to python version
+
+## File "/usr/local/lib/python3.8/site-packages/tracer-0.5-py3.8.egg/tracerlib/tracer_func.py", line 29, in <module>
+##     from Bio.Alphabet import IUPAC
+##   File "/usr/local/lib/python3.8/site-packages/Bio/Alphabet/__init__.py", line 20, in <module>
+##     raise ImportError(
+## ImportError: Bio.Alphabet has been removed from Biopython. In many cases, the alphabet can simply be ignored and removed from scripts. In a few cases, you may need to specify the ``molecule_type`
+
+## don't enable ENTRYPOINT BECAUSE OF THAT,
+## DIG up and set the igblast environment variable
+
+##ENTRYPOINT ["bash", "tracer/docker_helper_files/docker_wrapper.sh"]
+
 
 
 RUN pip install RSeQC
+RUN rm /usr/local/bin/python ; ln -s /usr/local/bin/python3 /usr/local/bin/python
+RUN rm /usr/local/bin/pip; ln -s /usr/local/bin/pip3 /usr/local/bin/pip
+
 
 ################################################################
 ## end of tracer stuff
 
-
-
+################################################################
+## delete this network stuff -doesn't fix the runtime problem
+##RUN wget --quiet https://files.pythonhosted.org/packages/b0/21/adfbf6168631e28577e4af9eb9f26d75fe72b2bb1d33762a5f2c425e6c2a/networkx-2.5.1.tar.gz && tar xzf networkx-2.5.1.tar.gz && cd networkx-2.5.1 && python setup.py install
+##RUN pip3 install networx[all]
+##RUN pip install git://github.com/networkx/networkx.git#egg=networkx
+################################################################
 
 ## any stuff from github
 
